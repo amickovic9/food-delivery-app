@@ -1,4 +1,4 @@
-package com.fink.food_delivery;
+package com.fink.fooddelivery;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
