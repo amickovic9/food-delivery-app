@@ -1,0 +1,122 @@
+name: fd-microservices
+
+x-service-defaults: &service-defaults
+  environment: &service-env
+    DB_USERNAME: root
+    DB_PASSWORD: proba123
+    JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+  depends_on:
+    mysql:
+      condition: service_healthy
+  deploy:
+    resources:
+      limits:
+        cpus: "0.5"
+        memory: 512m
+  restart: on-failure
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: proba123
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pproba123"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+  auth-service:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: auth-service
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true
+    ports:
+      - "8081:8080"
+
+  restaurant-service:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: restaurant-service
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:mysql://mysql:3306/restaurant_db?createDatabaseIfNotExist=true
+    ports:
+      - "8082:8080"
+
+  payment-service:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: payment-service
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:mysql://mysql:3306/payment_db?createDatabaseIfNotExist=true
+      PAYMENT_LATENCY_MIN_MS: "40"
+      PAYMENT_LATENCY_MAX_MS: "160"
+      PAYMENT_FAILURE_RATE: "0.03"
+    ports:
+      - "8083:8080"
+
+  notification-service:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: notification-service
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:mysql://mysql:3306/notification_db?createDatabaseIfNotExist=true
+      NOTIFICATION_LATENCY_MS: "5"
+    ports:
+      - "8084:8080"
+
+  delivery-service:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: delivery-service
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:mysql://mysql:3306/delivery_db?createDatabaseIfNotExist=true
+      AUTH_SERVICE_URL: http://auth-service:8080
+      ORDER_SERVICE_URL: http://order-service:8080
+    ports:
+      - "8085:8080"
+
+  order-service:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: order-service
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:mysql://mysql:3306/order_db?createDatabaseIfNotExist=true
+      RESTAURANT_SERVICE_URL: http://restaurant-service:8080
+      PAYMENT_SERVICE_URL: http://payment-service:8080
+      NOTIFICATION_SERVICE_URL: http://notification-service:8080
+      DELIVERY_SERVICE_URL: http://delivery-service:8080
+    ports:
+      - "8086:8080"

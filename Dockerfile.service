@@ -1,0 +1,12 @@
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
+COPY . .
+ARG SERVICE
+RUN mvn -q -pl services/${SERVICE} -am -B clean package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+ARG SERVICE
+COPY --from=build /build/services/${SERVICE}/target/${SERVICE}.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

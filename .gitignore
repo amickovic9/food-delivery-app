@@ -1,6 +1,9 @@
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
+.ms-local-pids
+*.log
+results/
 !**/src/main/**/target/
 !**/src/test/**/target/
 

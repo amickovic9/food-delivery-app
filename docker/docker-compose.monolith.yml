@@ -1,0 +1,46 @@
+name: fd-monolith
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: proba123
+      MYSQL_DATABASE: food_delivery
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pproba123"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+  monolith:
+    build:
+      context: ..
+      dockerfile: Dockerfile.monolith
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/food_delivery?createDatabaseIfNotExist=true
+      DB_USERNAME: root
+      DB_PASSWORD: proba123
+      SECURITY_ENABLED: "false"
+      SEED_ENABLED: "true"
+      PAYMENT_LATENCY_MIN_MS: "40"
+      PAYMENT_LATENCY_MAX_MS: "160"
+      PAYMENT_FAILURE_RATE: "0.03"
+      NOTIFICATION_LATENCY_MS: "5"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "3.0"
+          memory: 3g
